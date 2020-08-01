@@ -1,3 +1,20 @@
+
 {
-  "prefix": ">"
-}
+
+  "prefix": "?",
+
+  "discord_owner_id": "413173364216168449",
+
+  "token": "NTA4NjMxNDg2OTI5MzA1NjEy.W97x_A.t_RUqu2F9eQG_BkArJNDq_CF6kc",
+
+  "tenorAPI": "",
+
+  "newsAPI": "68d78c692e6f4bc7b81a8d63860a9293",
+
+  "youtubeAPI": "AIzaSyDwoqyZFU5vHppE_ua5OWoaT6q30H-y4Zk",
+
+  "yandexAPI": "yandex-api-key",
+
+  "geniusLyricsAPI": "genius-api-key"
+
+} 

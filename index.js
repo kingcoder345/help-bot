@@ -1,53 +1,84 @@
-const Discord = require("discord.js");
-const client = new Discord.Client();
-const fs = require("fs");
-const express = require('express');
-const app = express();
- client.commands = new Discord.Collection();
+const { CommandoClient } = require('discord.js-commando');
+const { Structures } = require('discord.js');
+const path = require('path');
+const { prefix, token, discord_owner_id } = require('./config.json');
 
-const config = require("./config.json");
-let cdseconds = 5;
-
-function changing_status() {
-    let status = ['Do > help for commands', `Servers: ${client.guilds.cache.size} Users: ${client.users.cache.size}`]
-    let random = status[Math.floor(Math.random() * status.length)]
-    client.user.setActivity(random)
-}
-
-client.on("ready", () => {
-    console.log(`${client.user.username} is online`, `Servers: ${client.guilds.cache.size} Users: ${client.users.cache.size}`);
-    setInterval(changing_status, 5000);
-    client.user.setUsername("help bot");
-});
-
-
-
-client.on("message", message => {
-  if (message.author.bot) return;
-  if(message.content.indexOf(config.prefix) !== 0) return;
-
-  // This is the best way to define args. Trust me.
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
-  const command = args.shift().toLowerCase();
-
-  // The list of if/else is replaced with those simple 2 lines:
-  try {
-    let commandFile = require(`./commands/${command}.js`);
-    commandFile.run(client, message, args);
-  } catch (err) {
-    console.error(err);
+Structures.extend('Guild', function(Guild) {
+  class MusicGuild extends Guild {
+    constructor(client, data) {
+      super(client, data);
+      this.musicData = {
+        queue: [],
+        isPlaying: false,
+        nowPlaying: null,
+        songDispatcher: null,
+        volume: 1
+      };
+      this.triviaData = {
+        isTriviaRunning: false,
+        wasTriviaEndCalled: false,
+        triviaQueue: [],
+        triviaScore: new Map()
+      };
     }
-  });
-
-
-
-
-client.login(process.env.TOKEN);
-
-
-
-app.get("/", (req, res) => {
-  res.sendStatus(200);
+  }
+  return MusicGuild;
 });
 
-app.listen(process.env.PORT);
+const client = new CommandoClient({
+  commandPrefix: prefix,
+  owner: discord_owner_id // value comes from config.json
+});
+
+client.registry
+  .registerDefaultTypes()
+  .registerGroups([
+    ['music', 'Music Command Group'],
+    ['gifs', 'Gif Command Group'],
+    ['other', 'random types of commands group'],
+    ['guild', 'guild related commands']
+  ])
+  .registerDefaultGroups()
+  .registerDefaultCommands({
+    eval: false,
+    prefix: false,
+    commandState: false
+  })
+  .registerCommandsIn(path.join(__dirname, 'commands'));
+
+client.once('ready', () => {
+  console.log('Ready!');
+  client.user.setActivity(`${prefix}help`, {
+    type: 'WATCHING',
+    url: 'https://github.com/galnir/Master-Bot'
+  });
+});
+
+client.on('voiceStateUpdate', async (___, newState) => {
+  if (
+    newState.member.user.bot &&
+    !newState.channelID &&
+    newState.guild.musicData.songDispatcher &&
+    newState.member.user.id == client.user.id
+  ) {
+    newState.guild.musicData.queue.length = 0;
+    newState.guild.musicData.songDispatcher.end();
+    return;
+  }
+  if (
+    newState.member.user.bot &&
+    newState.channelID &&
+    newState.member.user.id == client.user.id &&
+    !newState.selfDeaf
+  ) {
+    newState.setSelfDeaf(true);
+  }
+});
+
+client.on('guildMemberAdd', member => {
+  const channel = member.guild.channels.cache.find(ch => ch.name === 'general'); // change this to the channel name you want to send the greeting to
+  if (!channel) return;
+  channel.send(`Welcome ${member}!`);
+});
+
+client.login(token);
